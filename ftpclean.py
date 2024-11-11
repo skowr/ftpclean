@@ -1,0 +1,66 @@
+import secrets
+from datetime import datetime, timedelta
+from dateutil import parser
+from ftplib import FTP
+
+# Your FTP Server credentials
+ftp = FTP(secrets.FTP_SERVER)
+ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)
+
+current_time = datetime.now()
+number_of_all_files = 0
+number_of_deleted_files = 0
+
+def navigate_and_delete_files(remote_dir):
+    number_of_files_left = 0
+    number_of_files_in_directory = 0
+    number_of_directories = 0
+    global number_of_deleted_files
+    global number_of_all_files
+
+    directory_listing = ftp.mlsd(remote_dir)
+    for interesting_file in directory_listing:
+        file_name = interesting_file[0]
+
+        # Checking and deleting files
+        if interesting_file[1]['type'] == 'file':
+            number_of_files_left += 1
+            number_of_files_in_directory += 1
+            number_of_all_files += 1
+
+            timestamp = interesting_file[1]['modify']
+            filetime = parser.parse(timestamp)
+            if current_time > filetime + timedelta(hours=secrets.RETENTION_HOURS):
+                number_of_files_left -= 1
+                number_of_deleted_files += 1
+
+                # DELETE FILE HERE
+                if not secrets.SIMULATE:
+                    ftp.delete(remote_dir + '/' + file_name)
+                
+                print('DELETE FILE: ' + file_name)
+
+        # Checking directories
+        if interesting_file[1]['type'] == 'dir':
+            directory_name = interesting_file[0]
+            number_of_directories += 1
+            if directory_name not in secrets.EXCLUDED:
+                result = navigate_and_delete_files(directory_name)
+
+                # Remove folder if empty
+                if result[1] == 0:
+                    # DELETE FOLDER HERE
+                    if not secrets.SIMULATE:
+                        ftp.rmd(directory_name)
+                    
+                    print('DELETE FOLDER: ' + directory_name)
+
+                print(f'Folder reviewed: {interesting_file[0]} , total files: {str(result[0])} , files after removal: {str(result[1])} , folders inside: {str(result[2])}')
+           
+    return (number_of_files_in_directory, number_of_files_left, number_of_directories)
+
+result = navigate_and_delete_files('/')
+
+print(f'Totals Files: {number_of_all_files}, Deleted: {number_of_deleted_files}, Directories = {result[2]}')
+
+ftp.quit()
