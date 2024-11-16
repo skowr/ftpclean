@@ -10,6 +10,8 @@ ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)
 current_time = datetime.now()
 number_of_all_files = 0
 number_of_deleted_files = 0
+size_of_files_left = 0
+size_of_deleted_files = 0
 
 def navigate_and_delete_files(remote_dir):
     number_of_files_left = 0
@@ -17,6 +19,8 @@ def navigate_and_delete_files(remote_dir):
     number_of_directories = 0
     global number_of_deleted_files
     global number_of_all_files
+    global size_of_files_left
+    global size_of_deleted_files
 
     directory_listing = ftp.mlsd(remote_dir)
     for interesting_file in directory_listing:
@@ -27,18 +31,24 @@ def navigate_and_delete_files(remote_dir):
             number_of_files_left += 1
             number_of_files_in_directory += 1
             number_of_all_files += 1
-
+        
             timestamp = interesting_file[1]['modify']
             filetime = parser.parse(timestamp)
+            filesize = int(interesting_file[1]['size'])
+
             if current_time > filetime + timedelta(hours=secrets.RETENTION_HOURS):
                 number_of_files_left -= 1
                 number_of_deleted_files += 1
 
+                size_of_deleted_files += filesize
+            
                 # DELETE FILE HERE
                 if not secrets.SIMULATE:
                     ftp.delete(remote_dir + '/' + file_name)
                 
                 print('DELETE FILE: ' + file_name)
+            else:
+                size_of_files_left += filesize
 
         # Checking directories
         if interesting_file[1]['type'] == 'dir':
@@ -61,6 +71,6 @@ def navigate_and_delete_files(remote_dir):
 
 result = navigate_and_delete_files('/')
 
-print(f'Totals Files: {number_of_all_files}, Deleted: {number_of_deleted_files}, Directories = {result[2]}')
+print(f'****** TOTALS ******\n- Files: {number_of_all_files}\n- Deleted: {number_of_deleted_files}\n- Directories = {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
 
 ftp.quit()
