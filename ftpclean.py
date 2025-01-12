@@ -1,11 +1,10 @@
 import secrets
+import sys
+import time
 from datetime import datetime, timedelta
 from dateutil import parser
 from ftplib import FTP
 
-# Your FTP Server credentials
-ftp = FTP(secrets.FTP_SERVER)
-ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)
 
 current_time = datetime.now()
 number_of_all_files = 0
@@ -13,7 +12,7 @@ number_of_deleted_files = 0
 size_of_files_left = 0
 size_of_deleted_files = 0
 
-def navigate_and_delete_files(remote_dir):
+def navigate_and_delete_files(remote_dir, ftp):
     number_of_files_left = 0
     number_of_files_in_directory = 0
     number_of_directories = 0
@@ -55,7 +54,7 @@ def navigate_and_delete_files(remote_dir):
             directory_name = interesting_file[0]
             number_of_directories += 1
             if directory_name not in secrets.EXCLUDED:
-                result = navigate_and_delete_files(directory_name)
+                result = navigate_and_delete_files(directory_name, ftp)
 
                 # Remove folder if empty
                 if result[1] == 0:
@@ -69,8 +68,39 @@ def navigate_and_delete_files(remote_dir):
            
     return (number_of_files_in_directory, number_of_files_left, number_of_directories)
 
-result = navigate_and_delete_files('/')
 
-print(f'****** TOTALS ******\n- Files: {number_of_all_files}\n- Deleted: {number_of_deleted_files}\n- Directories = {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
+def login_and_delete():
+    # Your FTP Server credentials
+    ftp = FTP(secrets.FTP_SERVER)
+    ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)    
+    result = navigate_and_delete_files('/', ftp)
+    print(f'****** TOTALS ******\n- Files: {number_of_all_files}\n- Deleted: {number_of_deleted_files}\n- Directories = {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
+    ftp.quit()
 
-ftp.quit()
+def main():
+
+    pulse = 0
+
+    print('********* FTP CLEAN *********')    
+    print(datetime.now())
+    print('*****************************\n')    
+
+    if len(sys.argv) < 2:
+        login_and_delete()
+        exit(1)
+
+    try:
+        pulse = int(sys.argv[1])
+    except ValueError:
+        print("Wrong argument. Must be digit (number of hours)")
+        exit(1)
+
+    while(True):
+        login_and_delete()
+
+        print(f'\nSleeping for {pulse} hours\n')
+        time.sleep(pulse * 60 * 60)
+    
+if __name__ == "__main__":
+    main()
+
