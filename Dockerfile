@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir python-dateutil
 ADD ftpclean.py .
 ADD secrets.py .
 
-CMD [ "python","./ftpclean.py"]
+ENTRYPOINT [ "python","./ftpclean.py"]
