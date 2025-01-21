@@ -23,11 +23,11 @@ size_of_files_left = 0
 size_of_deleted_files = 0
 
 def log(input):
-    t = datetime.now().strftime('%Y.%m.%d %H.%M.%S ')
+    t = datetime.now().strftime('%Y-%m-%d %H:%M:%S ')
     print(t + input)
 
 
-def navigate_and_delete_files(remote_dir, ftp, retention):
+def navigate_and_delete_files(remote_dir, ftp, retention, debug):
     number_of_files_left = 0
     number_of_files_in_directory = 0
     number_of_directories = 0
@@ -50,6 +50,9 @@ def navigate_and_delete_files(remote_dir, ftp, retention):
             filetime = parser.parse(timestamp)
             filesize = int(interesting_file[1]['size'])
 
+            if debug:
+                log(f'Lookup file : {timestamp} size: {filesize} time: {filetime} ')
+
             if current_time > filetime + timedelta(hours=retention):
                 number_of_files_left -= 1
                 number_of_deleted_files += 1
@@ -70,7 +73,7 @@ def navigate_and_delete_files(remote_dir, ftp, retention):
             directory_name = interesting_file[0]
             number_of_directories += 1
             if directory_name not in secrets.EXCLUDED:
-                result = navigate_and_delete_files(directory_name, ftp, retention)
+                result = navigate_and_delete_files(directory_name, ftp, retention, debug)
 
                 # Remove folder if empty
                 if result[1] == 0:
@@ -87,12 +90,12 @@ def navigate_and_delete_files(remote_dir, ftp, retention):
     return (number_of_files_in_directory, number_of_files_left, number_of_directories)
 
 
-def login_and_delete(retention):
+def login_and_delete(retention, debug = False):
     # Your FTP Server credentials
 
     ftp = FTP(secrets.FTP_SERVER)
     ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)    
-    result = navigate_and_delete_files('/', ftp, retention)
+    result = navigate_and_delete_files('/', ftp, retention, debug)
     print(f'****** TOTALS ******\n- Files: {number_of_all_files}\n- Deleted: {number_of_deleted_files}\n- Directories = {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
     ftp.quit()
 
@@ -100,6 +103,7 @@ def main():
 
     pulse = 0
     retention = secrets.RETENTION_HOURS
+    debug = False
 
     print('********* FTP CLEAN *********')    
     print(f'Time: {datetime.now()}')
@@ -115,31 +119,40 @@ def main():
         try:
             retention = int(sys.argv[1])
         except ValueError:
-            print("Wrong argument. Must be digit (number of hours)\nftpclean.py <retention time> <time period>")
+            print("Wrong argument. Must be digit (number of hours)\nftpclean.py <retention time> <time period> <DEBUG>")
             exit(1)
-    elif  len(sys.argv) == 3:
+    elif len(sys.argv) == 3:
         try:
             retention = int(sys.argv[1])
             pulse = int(sys.argv[2])
         except ValueError:
-            print("Wrong argument. Must be digit (number of hours)\nftpclean.py <retention time> <time period>")
+            print("Wrong argument. Must be digit (number of hours)\nftpclean.py <retention time> <time period> <DEBUG>")
             exit(1)
+    elif len(sys.argv) == 4:
+        try:
+            retention = int(sys.argv[1])
+            pulse = int(sys.argv[2])
+            if sys.argv[3] == "DEBUG":
+                debug = True
+        except ValueError:
+            print("Wrong argument. Must be digit (number of hours)\nftpclean.py <retention time> <time period> <DEBUG>")
+            exit(1)
+
     else:
-        print("Wrong number of arguments. Must be digit (number of hours).\nftpclean.py <retention time> <time period>")
+        print("Wrong number of arguments. Must be digit (number of hours).\nftpclean.py <retention time> <time period> <DEBUG>")
         exit(1)
 
     print(f'Pulse: {str(pulse)}')    
     print(f'Retention: {str(retention)}')
     print('*****************************\n')
 
-
     # Execute application
     if pulse == 0:
-        login_and_delete(retention)
+        login_and_delete(retention, debug)
         print('Closing application')        
     else:
         while(True):
-            login_and_delete(retention)
+            login_and_delete(retention, debug)
 
             print(f'\nSleeping for {pulse} hours\n')
             time.sleep(pulse * 60 * 60)
