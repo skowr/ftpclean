@@ -62,8 +62,7 @@ def navigate_and_delete_files(remote_dir, ftp, retention, debug):
                 # DELETE FILE HERE
                 if not secrets.SIMULATE:
                     ftp.delete(remote_dir + '/' + file_name)
-                
-                # print('DELETE FILE: ' + file_name)
+                                
                 log('DELETE FILE: ' + file_name)
             else:
                 size_of_files_left += filesize
@@ -96,7 +95,9 @@ def login_and_delete(retention, debug = False):
     ftp = FTP(secrets.FTP_SERVER)
     ftp.login(secrets.FTP_USER, secrets.FTP_PASSWD)    
     result = navigate_and_delete_files('/', ftp, retention, debug)
-    print(f'****** TOTALS ******\n- Files: {number_of_all_files}\n- Deleted: {number_of_deleted_files}\n- Directories = {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
+    print(f'****** SUMMARY ******\n- Retention: {str(retention)}\n- Debug: {str(debug)}\n- Simulate: {str(secrets.SIMULATE)}')
+    print(f'****** TOTALS ******\n- All files: {number_of_all_files}\n- Deleted files: {number_of_deleted_files}\n- Reviewed directories: {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
+    print(f'********************')
     ftp.quit()
 
 def main():
