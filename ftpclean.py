@@ -1,7 +1,7 @@
 ###################################################################
 #
 # ftpclean.py <retention time> <time period>
-# 
+#
 # parameters:
 #  - retention time - minimum age of files in hours to be deleted
 #  - time period - waiting time in hours between each execution
@@ -12,8 +12,8 @@ import secrets
 import sys
 import time
 from datetime import datetime, timedelta
-from dateutil import parser
 from ftplib import FTP
+from dateutil import parser
 
 
 current_time = datetime.now()
@@ -22,9 +22,9 @@ number_of_deleted_files = 0
 size_of_files_left = 0
 size_of_deleted_files = 0
 
-def log(input):
+def log(inputstr):
     t = datetime.now().strftime('%Y-%m-%d %H:%M:%S ')
-    print(t + input)
+    print(t + inputstr)
 
 
 def navigate_and_delete_files(remote_dir, ftp, retention, debug):
@@ -45,20 +45,22 @@ def navigate_and_delete_files(remote_dir, ftp, retention, debug):
             number_of_files_left += 1
             number_of_files_in_directory += 1
             number_of_all_files += 1
-        
+            
             timestamp = interesting_file[1]['modify']
             filetime = parser.parse(timestamp)
             filesize = int(interesting_file[1]['size'])
 
-            if debug:
-                log(f'Lookup file : {timestamp} size: {filesize} time: {filetime} ')
+            filedeath = filetime + timedelta(hours=retention)
 
-            if current_time > filetime + timedelta(hours=retention):
+            if debug:
+                log(f'Lookup file : {timestamp} size: {filesize} time: {filetime} death: {filedeath}')
+
+            if current_time > filedeath:
                 number_of_files_left -= 1
                 number_of_deleted_files += 1
 
                 size_of_deleted_files += filesize
-            
+  
                 # DELETE FILE HERE
                 if not secrets.SIMULATE:
                     ftp.delete(remote_dir + '/' + file_name)
@@ -97,7 +99,7 @@ def login_and_delete(retention, debug = False):
     result = navigate_and_delete_files('/', ftp, retention, debug)
     print(f'****** SUMMARY ******\n- Retention: {str(retention)}\n- Debug: {str(debug)}\n- Simulate: {str(secrets.SIMULATE)}')
     print(f'****** TOTALS ******\n- All files: {number_of_all_files}\n- Deleted files: {number_of_deleted_files}\n- Reviewed directories: {result[2]}\n- Deleted size: {size_of_deleted_files//1024//1024} MB \n- Size left: {size_of_files_left//1024//1240} MB')
-    print(f'********************')
+    print( '********************')
     ftp.quit()
 
 def main():
