@@ -16,7 +16,7 @@ from ftplib import FTP
 from dateutil import parser
 
 
-current_time = datetime.now()
+
 number_of_all_files = 0
 number_of_deleted_files = 0
 size_of_files_left = 0
@@ -28,6 +28,7 @@ def log(inputstr):
 
 
 def navigate_and_delete_files(remote_dir, ftp, retention, debug):
+    current_time = datetime.now()
     number_of_files_left = 0
     number_of_files_in_directory = 0
     number_of_directories = 0
@@ -110,6 +111,8 @@ def main():
 
     print('********* FTP CLEAN *********')    
     print(f'Time: {datetime.now()}')
+    print(f'Server: {secrets.FTP_SERVER}')
+    print(f'User: {secrets.FTP_USER}')
     print('*****************************')
     if secrets.SIMULATE:
         print('*** SIMULATION ***')
@@ -154,7 +157,7 @@ def main():
         login_and_delete(retention, debug)
         print('Closing application')        
     else:
-        while(True):
+        while(True):            
             login_and_delete(retention, debug)
 
             print(f'\nSleeping for {pulse} hours\n')
